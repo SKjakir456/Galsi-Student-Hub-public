@@ -48,12 +48,27 @@ export function usePushNotifications() {
   const getVapidPublicKey = useCallback(async () => {
     if (vapidPublicKeyRef.current) return vapidPublicKeyRef.current;
 
+    console.log('[Push] Fetching VAPID public key...');
     const { data, error } = await supabase.functions.invoke('vapid-public-key');
-    if (error) throw error;
+    
+    if (error) {
+      console.error('[Push] Error fetching VAPID key:', error);
+      throw new Error('Failed to fetch notification key');
+    }
 
     const key = data?.publicKey as string | undefined;
-    if (!key) throw new Error('Missing VAPID public key');
+    if (!key) {
+      console.error('[Push] Missing VAPID public key in response:', data);
+      throw new Error('Notification key not configured');
+    }
 
+    // Validate key length (should be ~87 chars for 65-byte uncompressed P-256 key)
+    if (key.length < 80) {
+      console.error('[Push] VAPID key appears invalid (too short):', key.length);
+      throw new Error('Invalid notification key format');
+    }
+
+    console.log('[Push] VAPID key retrieved successfully');
     vapidPublicKeyRef.current = key;
     return key;
   }, []);
@@ -149,41 +164,52 @@ export function usePushNotifications() {
     setState((prev) => ({ ...prev, isLoading: true }));
 
     try {
+      console.log('[Push] Requesting notification permission...');
       const permission = await Notification.requestPermission();
+      console.log('[Push] Permission result:', permission);
       setState((prev) => ({ ...prev, permission }));
 
       if (permission !== 'granted') {
         setState((prev) => ({ ...prev, isLoading: false }));
-        return { success: false, error: 'Notification permission denied' };
+        return { success: false, error: 'Notification permission denied. Please allow notifications in your browser settings.' };
       }
 
+      console.log('[Push] Waiting for service worker...');
       const registration = await navigator.serviceWorker.ready;
+      console.log('[Push] Service worker ready');
 
       // If a subscription already exists (possibly tied to old VAPID keys), force a clean re-subscribe.
       const existing = await registration.pushManager.getSubscription();
       if (existing) {
+        console.log('[Push] Removing existing subscription...');
         await supabase.from('push_subscriptions').delete().eq('endpoint', existing.endpoint);
         await existing.unsubscribe();
       }
 
+      console.log('[Push] Getting VAPID key...');
       const vapidPublicKey = await getVapidPublicKey();
+      console.log('[Push] Converting VAPID key to Uint8Array...');
       const applicationServerKey = urlBase64ToUint8Array(vapidPublicKey);
 
+      console.log('[Push] Creating push subscription...');
       const subscription = await registration.pushManager.subscribe({
         userVisibleOnly: true,
         applicationServerKey: applicationServerKey.buffer as ArrayBuffer,
       });
 
-      console.log('Push subscription created:', subscription);
+      console.log('[Push] Subscription created:', subscription.endpoint);
 
+      console.log('[Push] Saving subscription to database...');
       await saveSubscriptionToDb(subscription);
 
+      console.log('[Push] Subscription complete!');
       setState((prev) => ({ ...prev, isSubscribed: true, isLoading: false }));
       return { success: true };
     } catch (error) {
-      console.error('Error subscribing to push notifications:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      console.error('[Push] Subscription error:', errorMessage, error);
       setState((prev) => ({ ...prev, isLoading: false }));
-      return { success: false, error: 'Failed to subscribe' };
+      return { success: false, error: errorMessage };
     }
   }, [getVapidPublicKey, saveSubscriptionToDb]);
 
