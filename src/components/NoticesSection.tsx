@@ -127,42 +127,52 @@ export function NoticesSection() {
   const notices = data || cachedNotices || [];
   const isUsingCache = !data && !!cachedNotices;
 
-  // Calculate category counts
-  const categoryCounts = useMemo(() => {
-    const counts: Record<string, number> = {};
-    notices.forEach(notice => {
-      const cat = notice.category || 'general';
-      counts[cat] = (counts[cat] || 0) + 1;
-    });
-    return counts;
-  }, [notices]);
-
-  // Filter and sort notices
-  const { filteredNotices, isFuzzyMatch } = useMemo(() => {
-    let sorted = [...notices]
+  // Apply search first, then calculate category counts from search results
+  const searchFilteredNotices = useMemo(() => {
+    const sorted = [...notices]
       .map(notice => ({
         ...notice,
         isNew: isWithinLastDays(notice.date, 3),
       }))
       .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
     
-    // Filter by category
-    if (selectedCategory) {
-      sorted = sorted.filter(notice => (notice.category || 'general') === selectedCategory);
-    }
-    
     if (!searchQuery.trim()) {
-      return { filteredNotices: sorted, isFuzzyMatch: false };
+      return { notices: sorted, isFuzzyMatch: false };
     }
     
     const results = fuzzySearch(sorted, searchQuery, notice => notice.title);
     const hasExactMatch = results.some(r => r.isExactMatch);
     
     return {
-      filteredNotices: results.map(r => r.item),
+      notices: results.map(r => r.item),
       isFuzzyMatch: results.length > 0 && !hasExactMatch,
     };
-  }, [notices, searchQuery, selectedCategory]);
+  }, [notices, searchQuery]);
+
+  // Calculate category counts from search-filtered notices
+  const categoryCounts = useMemo(() => {
+    const counts: Record<string, number> = {};
+    searchFilteredNotices.notices.forEach(notice => {
+      const cat = notice.category || 'general';
+      counts[cat] = (counts[cat] || 0) + 1;
+    });
+    return counts;
+  }, [searchFilteredNotices.notices]);
+
+  // Apply category filter on top of search results
+  const { filteredNotices, isFuzzyMatch } = useMemo(() => {
+    let result = searchFilteredNotices.notices;
+    
+    // Filter by category
+    if (selectedCategory) {
+      result = result.filter(notice => (notice.category || 'general') === selectedCategory);
+    }
+    
+    return {
+      filteredNotices: result,
+      isFuzzyMatch: searchFilteredNotices.isFuzzyMatch,
+    };
+  }, [searchFilteredNotices, selectedCategory]);
 
   const handleRefresh = async () => {
     await refetch();
