@@ -91,46 +91,48 @@ export const NoticeCard = forwardRef<HTMLDivElement, NoticeCardProps>(
     return (
       <div
         ref={ref}
-        className="glass-card-elevated p-5 md:p-6 hover-lift group animate-fade-in"
+        className="glass-card-elevated p-4 md:p-6 hover-lift group animate-fade-in"
         style={{ animationDelay: `${index * 80}ms` }}
       >
-        <div className="flex items-start justify-between gap-3 md:gap-4">
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 mb-2 flex-wrap">
-              <span className="text-xs font-medium text-muted-foreground bg-muted/50 px-2 py-0.5 rounded-full">
-                {formattedDate}
+        <div className="flex flex-col gap-3">
+          {/* Header with badges */}
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-xs font-medium text-muted-foreground bg-muted/50 px-2 py-0.5 rounded-full">
+              {formattedDate}
+            </span>
+            {notice.category && notice.category !== 'general' && (
+              <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium border ${categoryConfig.color}`}>
+                <categoryConfig.icon className="w-3 h-3" />
+                {categoryConfig.label}
               </span>
-              {notice.category && notice.category !== 'general' && (
-                <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium border ${categoryConfig.color}`}>
-                  <categoryConfig.icon className="w-3 h-3" />
-                  {categoryConfig.label}
-                </span>
-              )}
-              {notice.isNew && (
-                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-gradient-to-r from-primary/20 to-accent/20 text-primary text-xs font-bold border border-primary/20">
-                  <Sparkles className="w-3 h-3" />
-                  NEW
-                </span>
-              )}
-              {notice.isImportant && (
-                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-destructive/10 text-destructive text-xs font-bold border border-destructive/20">
-                  <AlertCircle className="w-3 h-3" />
-                  Important
-                </span>
-              )}
-              {isPdf && (
-                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-primary/10 text-primary text-xs font-medium">
-                  <FileText className="w-3 h-3" />
-                  PDF
-                </span>
-              )}
-            </div>
-            <h3 className="text-base md:text-lg font-semibold text-foreground leading-snug line-clamp-2 group-hover:text-primary transition-colors duration-300">
-              {notice.title}
-            </h3>
+            )}
+            {notice.isNew && (
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-gradient-to-r from-primary/20 to-accent/20 text-primary text-xs font-bold border border-primary/20">
+                <Sparkles className="w-3 h-3" />
+                NEW
+              </span>
+            )}
+            {notice.isImportant && (
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-destructive/10 text-destructive text-xs font-bold border border-destructive/20">
+                <AlertCircle className="w-3 h-3" />
+                Important
+              </span>
+            )}
+            {isPdf && (
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-primary/10 text-primary text-xs font-medium">
+                <FileText className="w-3 h-3" />
+                PDF
+              </span>
+            )}
           </div>
-          <div className="flex-shrink-0 flex gap-2">
-            {/* Direct link as fallback */}
+          
+          {/* Title - full width, no truncation on mobile */}
+          <h3 className="text-sm md:text-lg font-semibold text-foreground leading-snug group-hover:text-primary transition-colors duration-300">
+            {notice.title}
+          </h3>
+          
+          {/* Action buttons */}
+          <div className="flex gap-2 pt-1">
             <a
               href={notice.url}
               target="_blank"
@@ -140,7 +142,6 @@ export const NoticeCard = forwardRef<HTMLDivElement, NoticeCardProps>(
               <ExternalLink className="w-3.5 h-3.5" />
               Open
             </a>
-            {/* Proxy download button */}
             <Button
               variant="glass"
               size="sm"
