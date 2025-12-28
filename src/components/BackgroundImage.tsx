@@ -11,6 +11,9 @@ export function BackgroundImage() {
         src={campusBg}
         alt=""
         aria-hidden="true"
+        loading="eager"
+        decoding="async"
+        fetchPriority="high"
         className="absolute inset-0 w-full h-[150%] object-cover object-center blur-[2px] will-change-transform"
         style={{ transform: `translateY(-${parallaxOffset}px)` }}
       />

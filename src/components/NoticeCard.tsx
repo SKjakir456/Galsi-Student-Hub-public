@@ -1,4 +1,4 @@
-import { forwardRef, useState } from 'react';
+import { forwardRef, useState, memo } from 'react';
 import { 
   ExternalLink, 
   FileText, 
@@ -47,7 +47,7 @@ const CATEGORY_CONFIG: Record<string, { icon: LucideIcon; label: string; color: 
   general: { icon: LayoutGrid, label: 'General', color: 'bg-muted text-muted-foreground border-border' },
 };
 
-export const NoticeCard = forwardRef<HTMLDivElement, NoticeCardProps>(
+export const NoticeCard = memo(forwardRef<HTMLDivElement, NoticeCardProps>(
   function NoticeCard({ notice, index }, ref) {
     const formattedDate = new Date(notice.date).toLocaleDateString('en-IN', {
       day: 'numeric',
@@ -161,4 +161,4 @@ export const NoticeCard = forwardRef<HTMLDivElement, NoticeCardProps>(
       </div>
     );
   }
-);
+));
