@@ -78,6 +78,7 @@ export function NoticesSection() {
   const [lastRefreshed, setLastRefreshed] = useState<Date | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [showAll, setShowAll] = useState(false);
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [cachedNotices] = useState<Notice[] | null>(() => loadCachedNotices());
 
@@ -350,11 +351,27 @@ export function NoticesSection() {
 
           {/* Notices Grid */}
           {!isLoading && filteredNotices.length > 0 && (
-            <div className={`space-y-3 md:space-y-4 mb-6 md:mb-8 stagger-children ${isVisible ? 'visible' : ''}`}>
-              {filteredNotices.slice(0, searchQuery || selectedCategory ? 10 : 5).map((notice, index) => (
-                <NoticeCard key={notice.id} notice={notice} index={index} />
-              ))}
-            </div>
+            <>
+              <div className={`space-y-3 md:space-y-4 mb-6 md:mb-8 stagger-children ${isVisible ? 'visible' : ''}`}>
+                {(showAll ? filteredNotices : filteredNotices.slice(0, 10)).map((notice, index) => (
+                  <NoticeCard key={notice.id} notice={notice} index={index} />
+                ))}
+              </div>
+              
+              {/* Show More / Show Less Button */}
+              {filteredNotices.length > 10 && (
+                <div className="text-center mb-6">
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="gap-2"
+                    onClick={() => setShowAll(!showAll)}
+                  >
+                    {showAll ? 'Show Less' : `Show All ${filteredNotices.length} Notices`}
+                  </Button>
+                </div>
+              )}
+            </>
           )}
 
           {/* View All Link */}
