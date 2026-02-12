@@ -14,9 +14,7 @@ export function useScrollReveal<T extends HTMLElement>(
       ([entry]) => {
         if (entry.isIntersecting) {
           setIsVisible(true);
-        } else {
-          // Reset visibility when element leaves viewport for repeat animation
-          setIsVisible(false);
+          observer.unobserve(entry.target);
         }
       },
       {
