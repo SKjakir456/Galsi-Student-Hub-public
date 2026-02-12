@@ -137,7 +137,7 @@ export function usePushNotifications() {
   const checkSubscription = useCallback(async () => {
     try {
       const registration = await navigator.serviceWorker.ready;
-      const subscription = await registration.pushManager.getSubscription();
+      const subscription = await (registration as any).pushManager.getSubscription();
 
       if (!subscription) {
         setState((prev) => ({ ...prev, isSubscribed: false, isLoading: false }));
@@ -179,7 +179,7 @@ export function usePushNotifications() {
       console.log('[Push] Service worker ready');
 
       // If a subscription already exists (possibly tied to old VAPID keys), force a clean re-subscribe.
-      const existing = await registration.pushManager.getSubscription();
+      const existing = await (registration as any).pushManager.getSubscription();
       if (existing) {
         console.log('[Push] Removing existing subscription...');
         await supabase.from('push_subscriptions').delete().eq('endpoint', existing.endpoint);
@@ -192,7 +192,7 @@ export function usePushNotifications() {
       const applicationServerKey = urlBase64ToUint8Array(vapidPublicKey);
 
       console.log('[Push] Creating push subscription...');
-      const subscription = await registration.pushManager.subscribe({
+      const subscription = await (registration as any).pushManager.subscribe({
         userVisibleOnly: true,
         applicationServerKey: applicationServerKey.buffer as ArrayBuffer,
       });
@@ -219,7 +219,7 @@ export function usePushNotifications() {
 
     try {
       const registration = await navigator.serviceWorker.ready;
-      const subscription = await registration.pushManager.getSubscription();
+      const subscription = await (registration as any).pushManager.getSubscription();
 
       if (subscription) {
         await supabase.from('push_subscriptions').delete().eq('endpoint', subscription.endpoint);
