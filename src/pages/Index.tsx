@@ -8,6 +8,7 @@ import { ContactSection } from '@/components/ContactSection';
 import { Footer } from '@/components/Footer';
 import { BackgroundImage } from '@/components/BackgroundImage';
 import { AdminNotificationTest } from '@/components/AdminNotificationTest';
+import { PWAInstallBanner } from '@/components/PWAInstallBanner';
 
 const Index = () => {
   return (
@@ -24,6 +25,7 @@ const Index = () => {
         <ContactSection />
       </main>
       <Footer />
+      <PWAInstallBanner />
     </div>
   );
 };

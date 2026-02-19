@@ -1,4 +1,4 @@
-import { ArrowRight, RefreshCw, Loader2, Clock, Radio, SearchX, WifiOff, AlertCircle, Inbox, Sparkles } from 'lucide-react';
+import { ArrowRight, RefreshCw, Loader2, Clock, Radio, SearchX, WifiOff, AlertCircle, Inbox, Sparkles, Bookmark } from 'lucide-react';
 import { NoticeCard } from './NoticeCard';
 import { NoticeSearch } from './NoticeSearch';
 import { NoticeCategoryFilter } from './NoticeCategoryFilter';
@@ -11,6 +11,8 @@ import { useToast } from '@/hooks/use-toast';
 import { NotificationSubscribe } from './NotificationSubscribe';
 import { useState, useEffect, useMemo } from 'react';
 import { fuzzySearch } from '@/lib/fuzzySearch';
+import { BookmarksPanel } from './BookmarksPanel';
+import { useBookmarks } from '@/hooks/useBookmarks';
 
 function NoticeCardSkeleton({ index }: { index: number }) {
   return (
@@ -80,6 +82,8 @@ export function NoticesSection() {
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [cachedNotices] = useState<Notice[] | null>(() => loadCachedNotices());
+  const [bookmarksPanelOpen, setBookmarksPanelOpen] = useState(false);
+  const { bookmarks } = useBookmarks();
 
   useEffect(() => {
     const handleOnline = () => setIsOnline(true);
@@ -245,6 +249,20 @@ export function NoticesSection() {
                 </div>
                 <div className="flex items-center gap-2 self-start md:self-auto">
                   <NotificationSubscribe />
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="gap-2 relative"
+                    onClick={() => setBookmarksPanelOpen(true)}
+                  >
+                    <Bookmark className="w-4 h-4" />
+                    <span className="hidden sm:inline">Saved</span>
+                    {bookmarks.length > 0 && (
+                      <span className="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] flex items-center justify-center rounded-full bg-primary text-primary-foreground text-[10px] font-bold px-1">
+                        {bookmarks.length}
+                      </span>
+                    )}
+                  </Button>
                   <Button 
                     variant="outline" 
                     size="sm" 
@@ -368,6 +386,7 @@ export function NoticesSection() {
           </div>
         </div>
       </div>
+      <BookmarksPanel open={bookmarksPanelOpen} onOpenChange={setBookmarksPanelOpen} />
     </section>
   );
 }
