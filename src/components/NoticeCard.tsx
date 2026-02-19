@@ -15,10 +15,13 @@ import {
   PartyPopper,
   AlertTriangle,
   LayoutGrid,
+  Bookmark,
+  BookmarkCheck,
   LucideIcon
 } from 'lucide-react';
 import { Button } from './ui/button';
 import { supabase } from '@/integrations/supabase/client';
+import { useBookmarks } from '@/hooks/useBookmarks';
 
 interface Notice {
   id: string;
@@ -59,6 +62,8 @@ export const NoticeCard = memo(forwardRef<HTMLDivElement, NoticeCardProps>(
     const categoryConfig = CATEGORY_CONFIG[notice.category || 'general'] || CATEGORY_CONFIG.general;
 
     const [isDownloading, setIsDownloading] = useState(false);
+    const { isBookmarked, toggleBookmark } = useBookmarks();
+    const bookmarked = isBookmarked(notice.id);
 
     const handleProxyDownload = async () => {
       setIsDownloading(true);
@@ -132,7 +137,7 @@ export const NoticeCard = memo(forwardRef<HTMLDivElement, NoticeCardProps>(
           </h3>
           
           {/* Action buttons */}
-          <div className="flex gap-2 pt-1">
+          <div className="flex gap-2 pt-1 flex-wrap">
             <a
               href={notice.url}
               target="_blank"
@@ -156,6 +161,23 @@ export const NoticeCard = memo(forwardRef<HTMLDivElement, NoticeCardProps>(
               )}
               <span className="text-xs">{isDownloading ? 'Loading...' : 'Download'}</span>
             </Button>
+            <button
+              onClick={() => toggleBookmark(notice)}
+              className={`inline-flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md border transition-colors ${
+                bookmarked
+                  ? 'bg-primary/10 border-primary/30 text-primary'
+                  : 'border-border/50 bg-background/50 hover:bg-muted/50 text-muted-foreground hover:text-foreground'
+              }`}
+              aria-label={bookmarked ? 'Remove bookmark' : 'Save notice'}
+              title={bookmarked ? 'Remove bookmark' : 'Save notice'}
+            >
+              {bookmarked ? (
+                <BookmarkCheck className="w-3.5 h-3.5" />
+              ) : (
+                <Bookmark className="w-3.5 h-3.5" />
+              )}
+              <span className="hidden sm:inline">{bookmarked ? 'Saved' : 'Save'}</span>
+            </button>
           </div>
         </div>
       </div>
