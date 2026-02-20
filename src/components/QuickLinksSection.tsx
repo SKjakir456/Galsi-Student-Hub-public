@@ -1,15 +1,29 @@
-import { 
-  GraduationCap, 
-  FileText, 
-  Calendar, 
-  Building2, 
+import {
+  GraduationCap,
+  FileText,
+  Calendar,
+  Building2,
   BookOpen,
-  ClipboardList
+  ClipboardList,
+  LogIn,
+  CreditCard
 } from 'lucide-react';
 import { QuickActionCard } from './QuickActionCard';
 import { useScrollReveal } from '@/hooks/useScrollReveal';
 
 const quickLinks = [
+  {
+    icon: LogIn,
+    title: 'Student Login',
+    description: 'Access your student portal for attendance, marks, fees, and more.',
+    href: 'https://galsimahavidyalaya.in/student_login.aspx',
+  },
+  {
+    icon: CreditCard,
+    title: 'Fee Payment',
+    description: 'Pay semester fees, examination fees, and other payments online.',
+    href: 'https://galsimahavidyalaya.in/student_login.aspx',
+  },
   {
     icon: GraduationCap,
     title: 'Admissions 2025-26',

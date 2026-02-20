@@ -1,4 +1,4 @@
-import { Bell, Sparkles, ExternalLink } from 'lucide-react';
+import { Bell, Sparkles, ExternalLink, LogIn } from 'lucide-react';
 import { Button } from './ui/button';
 import logo from '@/assets/logo.png';
 
@@ -7,11 +7,11 @@ export function Hero() {
     <section className="relative min-h-[45vh] md:min-h-screen flex items-center justify-center overflow-hidden pt-14 md:pt-20 pb-4 md:pb-0">
       {/* Subtle pattern overlay */}
       <div className="absolute inset-0 bg-pattern opacity-20" />
-      
+
       <div className="container mx-auto px-4 relative z-10">
         <div className="max-w-4xl mx-auto text-center">
           {/* Badge - Hidden on mobile for space */}
-          <div 
+          <div
             className="hidden md:inline-flex items-center gap-2 px-4 py-2 rounded-full glass-card mb-8 animate-fade-in"
             style={{ animationDelay: '0.1s' }}
           >
@@ -22,19 +22,19 @@ export function Hero() {
           </div>
 
           {/* College Logo - Smaller on mobile */}
-          <div 
+          <div
             className="mb-4 md:mb-6 animate-fade-in"
             style={{ animationDelay: '0.15s' }}
           >
-            <img 
-              src={logo} 
-              alt="GS Hub Logo" 
+            <img
+              src={logo}
+              alt="GS Hub Logo"
               className="w-36 h-36 md:w-52 md:h-52 mx-auto object-contain"
             />
           </div>
 
           {/* Heading - Compact on mobile */}
-          <h1 
+          <h1
             className="text-2xl sm:text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight mb-2 md:mb-4 animate-fade-in-up"
             style={{ animationDelay: '0.2s' }}
           >
@@ -42,7 +42,7 @@ export function Hero() {
           </h1>
 
           {/* Bengali Name - Smaller on mobile */}
-          <p 
+          <p
             className="text-base md:text-2xl text-muted-foreground mb-1 md:mb-2 animate-fade-in-up"
             style={{ animationDelay: '0.3s' }}
           >
@@ -50,7 +50,7 @@ export function Hero() {
           </p>
 
           {/* Subtitle - Compact on mobile */}
-          <p 
+          <p
             className="text-xs md:text-lg text-muted-foreground max-w-2xl mx-auto mb-2 md:mb-4 leading-relaxed animate-fade-in-up"
             style={{ animationDelay: '0.4s' }}
           >
@@ -58,16 +58,16 @@ export function Hero() {
           </p>
 
           {/* Description - Hidden on mobile */}
-          <p 
+          <p
             className="hidden md:block text-sm md:text-base text-muted-foreground max-w-xl mx-auto mb-10 leading-relaxed animate-fade-in-up"
             style={{ animationDelay: '0.5s' }}
           >
-            Access the latest notices, academic updates, and important links — 
+            Access the latest notices, academic updates, and important links —
             all in one student-friendly dashboard.
           </p>
 
           {/* CTAs - Compact on mobile */}
-          <div 
+          <div
             className="flex flex-col sm:flex-row items-center justify-center gap-2 md:gap-4 mb-6 md:mb-16 animate-fade-in-up"
             style={{ animationDelay: '0.6s' }}
           >
@@ -81,6 +81,12 @@ export function Hero() {
               <a href="#notices">
                 <Bell className="w-5 h-5" />
                 View Latest Notices
+              </a>
+            </Button>
+            <Button variant="ghost" size="default" className="md:hidden gap-2 text-primary" asChild>
+              <a href="https://galsimahavidyalaya.in/student_login.aspx" target="_blank" rel="noopener noreferrer">
+                <LogIn className="w-4 h-4" />
+                Student Login
               </a>
             </Button>
             <Button variant="hero-secondary" size="default" className="md:hidden gap-2" asChild>
@@ -98,7 +104,7 @@ export function Hero() {
           </div>
 
           {/* Scroll Indicator - Hidden on mobile */}
-          <div 
+          <div
             className="hidden md:block animate-fade-in"
             style={{ animationDelay: '0.8s' }}
           >

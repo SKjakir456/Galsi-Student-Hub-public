@@ -1,6 +1,6 @@
-import { 
-  CreditCard, 
-  FileCheck, 
+import {
+  CreditCard,
+  FileCheck,
   Users,
   Award,
   Landmark,
@@ -13,7 +13,7 @@ const services = [
     icon: CreditCard,
     title: 'Fee Payment',
     description: 'Pay tuition and other fees online',
-    href: 'https://galsimahavidyalaya.ac.in/fees-structure-2/',
+    href: 'https://galsimahavidyalaya.in/student_login.aspx',
   },
   {
     icon: FileCheck,
