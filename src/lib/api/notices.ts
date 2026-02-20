@@ -47,7 +47,211 @@ function isHighPriority(title: string, category: string): boolean {
   return urgentKeywords.some(keyword => lowerTitle.includes(keyword));
 }
 
-// Sample notices data - shown when scraping fails
+// Try to fetch using different methods
+async function fetchWithMethod(url: string, method: string): Promise<{ ok: boolean; text?: string; error?: string }> {
+  try {
+    const response = await fetch(url, {
+      method: method,
+      headers: {
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+      },
+    });
+
+    if (!response.ok) {
+      return { ok: false, error: `HTTP ${response.status}` };
+    }
+
+    const text = await response.text();
+    return { ok: true, text };
+  } catch (error) {
+    return { ok: false, error: (error as Error).message };
+  }
+}
+
+async function scrapeDirectly(): Promise<NoticesResponse> {
+  const targetUrl = 'https://galsimahavidyalaya.ac.in/category/notice/';
+
+  // Try multiple approaches
+  const approaches = [
+    // Direct fetch
+    async () => {
+      return fetchWithMethod(targetUrl, 'GET');
+    },
+    // Via textise dot iitty (textise dot iitty is a text-only version)
+    async () => {
+      const response = await fetch('https://r.jina.ai/' + encodeURIComponent(targetUrl));
+      if (response.ok) {
+        const text = await response.text();
+        return { ok: true, text };
+      }
+      return { ok: false, error: 'Jina AI failed' };
+    },
+    // Via textise dot iitty alternative - using textise dot iitty
+    async () => {
+      const response = await fetch('https://r.jina.ai/http://' + targetUrl.replace('https://', ''));
+      if (response.ok) {
+        const text = await response.text();
+        return { ok: true, text };
+      }
+      return { ok: false, error: 'Jina AI v2 failed' };
+    },
+  ];
+
+  let html = '';
+  let lastError = '';
+
+  for (let i = 0; i < approaches.length; i++) {
+    try {
+      const result = await approaches[i]();
+      if (result.ok && result.text && result.text.length > 100) {
+        html = result.text;
+        console.log('Scraping method', i, 'succeeded');
+        break;
+      }
+      lastError = result.error || 'Empty response';
+      console.log('Scraping method', i, 'failed:', lastError);
+    } catch (e) {
+      lastError = (e as Error).message;
+      console.log('Scraping method', i, 'error:', lastError);
+    }
+  }
+
+  if (!html) {
+    // Last resort - try Google cache
+    try {
+      const cacheUrl = 'https://webcache.googleusercontent.com/search?q=cache:' + targetUrl;
+      const result = await fetchWithMethod(cacheUrl, 'GET');
+      if (result.ok && result.text) {
+        html = result.text;
+        console.log('Google cache worked!');
+      }
+    } catch (e) {
+      console.log('Google cache failed:', e);
+    }
+  }
+
+  if (!html) {
+    return { success: false, error: 'All scraping methods failed: ' + lastError };
+  }
+
+  const notices: Notice[] = [];
+  const currentDate = new Date();
+
+  // Try multiple regex patterns to extract notices
+  const patterns = [
+    // Pattern 1: Table rows
+    /<tr>\s*<td[^>]*>(\d+)<\/td>\s*<td[^>]*>(\d{1,2}-\d{1,2}-\d{4})<\/td>\s*<td[^>]*>([^<]+)<\/td>\s*<td[^>]*>\s*<a\s+href="([^"]+)"[^>]*>/gi,
+    // Pattern 2: List items
+    /<li[^>]*>.*?<a[^>]+href="([^"]+\.pdf)"[^>]*>([^<]+)<\/a>.*?(\d{1,2}[-\/]\d{1,2}[-\/]\d{2,4}).*?<\/li>/gi,
+    // Pattern 3: Article links
+    /<article[^>]*>.*?<a[^>]+href="([^"]+\.pdf)"[^>]*>([^<]+)<\/a>.*?<\/article>/gi,
+    // Pattern 4: Simple link with date
+    /<a[^>]+href="([^"]*notice[^"]*\.pdf)"[^>]*>([^<]+)<\/a>.*?(\d{1,2}[-\/]\d{1,2}[-\/]\d{2,4})/gi,
+  ];
+
+  for (const pattern of patterns) {
+    const matches = [...html.matchAll(pattern)];
+    console.log('Pattern found', matches.length, 'matches');
+
+    for (const match of matches) {
+      if (notices.length >= 20) break;
+
+      try {
+        let title: string, dateStr: string, pdfUrl: string;
+
+        if (pattern === patterns[0]) {
+          // Table row
+          pdfUrl = match[4].trim();
+          title = match[3].trim().replace(/&/g, '&').replace(/&#8217;/g, "'").replace(/&#8211;/g, '-');
+          dateStr = match[2].trim();
+        } else {
+          // Other patterns
+          pdfUrl = match[1].trim();
+          title = match[2].trim().replace(/&/g, '&').replace(/&#8217;/g, "'").replace(/&#8211;/g, '-');
+          dateStr = match[3] ? match[3].trim() : '';
+        }
+
+        if (!pdfUrl || pdfUrl === '#' || !pdfUrl.includes('.')) continue;
+
+        // Make absolute URL
+        if (pdfUrl.startsWith('/')) {
+          pdfUrl = 'https://galsimahavidyalaya.ac.in' + pdfUrl;
+        } else if (!pdfUrl.startsWith('http')) {
+          pdfUrl = 'https://galsimahavidyalaya.ac.in/' + pdfUrl;
+        }
+
+        // Parse date
+        let parsedDate = new Date();
+        let isNew = false;
+
+        if (dateStr) {
+          const parts = dateStr.split(/[-\/]/);
+          if (parts.length === 3) {
+            let [day, month, year] = parts.map(Number);
+            if (year < 100) year += 2000;
+            parsedDate = new Date(year, month - 1, day);
+            const daysDiff = Math.floor((currentDate.getTime() - parsedDate.getTime()) / (1000 * 60 * 60 * 24));
+            isNew = daysDiff <= 7 && daysDiff >= 0;
+          }
+        }
+
+        const category = categorizeNotice(title);
+        const isImportant = isHighPriority(title, category);
+
+        notices.push({
+          id: `notice-${notices.length + 1}`,
+          title: title.substring(0, 200),
+          date: `${parsedDate.getFullYear()}-${String(parsedDate.getMonth() + 1).padStart(2, '0')}-${String(parsedDate.getDate()).padStart(2, '0')}`,
+          url: pdfUrl,
+          isNew,
+          isImportant,
+          category,
+        });
+      } catch (e) {
+        console.log('Error parsing match:', e);
+      }
+    }
+
+    if (notices.length > 0) break;
+  }
+
+  if (notices.length === 0) {
+    // Try to extract any PDF links from the page
+    const pdfLinkRegex = /href="(https?:\/\/[^"]+\.pdf)"/gi;
+    const pdfMatches = [...html.matchAll(pdfLinkRegex)];
+    console.log('Found', pdfMatches.length, 'PDF links');
+
+    for (const match of pdfMatches.slice(0, 10)) {
+      const pdfUrl = match[1];
+      const filename = pdfUrl.split('/').pop()?.replace(/-/g, ' ').replace(/_/g, ' ') || 'Notice';
+
+      notices.push({
+        id: `notice-${notices.length + 1}`,
+        title: filename.substring(0, 100),
+        date: new Date().toISOString().split('T')[0],
+        url: pdfUrl,
+        isNew: true,
+        isImportant: false,
+        category: 'general',
+      });
+    }
+  }
+
+  notices.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+  if (notices.length === 0) {
+    return { success: false, error: 'Could not extract notices from page' };
+  }
+
+  return {
+    success: true,
+    notices: notices.slice(0, 30),
+    scrapedAt: new Date().toISOString()
+  };
+}
+
+// Fallback sample notices
 const SAMPLE_NOTICES: Notice[] = [
   {
     id: 'notice-1',
@@ -76,148 +280,11 @@ const SAMPLE_NOTICES: Notice[] = [
     isImportant: true,
     category: 'scholarship',
   },
-  {
-    id: 'notice-4',
-    title: 'Semester II Internal Examination Schedule 2025',
-    date: '2025-02-05',
-    url: 'https://galsimahavidyalaya.ac.in/wp-content/uploads/2025/02/Internal-Exam-Sem-II.pdf',
-    isNew: false,
-    isImportant: false,
-    category: 'exam',
-  },
-  {
-    id: 'notice-5',
-    title: 'Holiday Notice - Saraswati Puja 2025',
-    date: '2025-01-28',
-    url: 'https://galsimahavidyalaya.ac.in/wp-content/uploads/2025/01/Holiday-Saraswati-Puja.pdf',
-    isNew: false,
-    isImportant: false,
-    category: 'holiday',
-  },
-  {
-    id: 'notice-6',
-    title: 'Semester I Result Published - Back Paper Examination Notice',
-    date: '2025-01-20',
-    url: 'https://galsimahavidyalaya.ac.in/wp-content/uploads/2025/01/Back-Paper-Sem-I.pdf',
-    isNew: false,
-    isImportant: true,
-    category: 'result',
-  },
-  {
-    id: 'notice-7',
-    title: 'Admission Notice for B.Ed. Course Session 2025-26',
-    date: '2025-01-15',
-    url: 'https://galsimahavidyalaya.ac.in/wp-content/uploads/2025/01/Admission-BEd-2025.pdf',
-    isNew: false,
-    isImportant: true,
-    category: 'admission',
-  },
-  {
-    id: 'notice-8',
-    title: 'Syllabus for Semester III (Honours & General) - Session 2024-25',
-    date: '2025-01-10',
-    url: 'https://galsimahavidyalaya.ac.in/wp-content/uploads/2025/01/Syllabus-Sem-III.pdf',
-    isNew: false,
-    isImportant: false,
-    category: 'syllabus',
-  },
 ];
-
-// Direct client-side scraping using CORS proxies
-async function scrapeWithProxy(proxyUrl: string, targetUrl: string): Promise<{ ok: boolean; text?: string; error?: string }> {
-  try {
-    const response = await fetch(proxyUrl + encodeURIComponent(targetUrl), {
-      headers: {
-        'Accept': 'text/html,application/xhtml+xml',
-      }
-    });
-
-    if (!response.ok) {
-      return { ok: false, error: `Proxy returned ${response.status}` };
-    }
-
-    const text = await response.text();
-    return { ok: true, text };
-  } catch (error) {
-    return { ok: false, error: (error as Error).message };
-  }
-}
-
-async function scrapeDirectly(): Promise<NoticesResponse> {
-  const targetUrl = 'https://galsimahavidyalaya.ac.in/category/notice/';
-
-  // Try multiple CORS proxies
-  const proxies = [
-    'https://api.allorigins.win/raw?url=',
-    'https://corsproxy.io/?',
-    'https://proxy.cors.sh/',
-  ];
-
-  let html = '';
-  let lastError = '';
-
-  for (const proxy of proxies) {
-    const result = await scrapeWithProxy(proxy, targetUrl);
-    if (result.ok && result.text) {
-      html = result.text;
-      console.log('Successfully scraped with proxy:', proxy);
-      break;
-    }
-    lastError = result.error || 'Unknown error';
-    console.log('Proxy failed:', proxy, result.error);
-  }
-
-  if (!html) {
-    return { success: false, error: 'All CORS proxies failed: ' + lastError };
-  }
-
-  const notices: Notice[] = [];
-  const currentDate = new Date();
-
-  // Parse HTML table rows
-  const tableRowRegex = /<tr>\s*<td[^>]*>(\d+)<\/td>\s*<td[^>]*>(\d{1,2}-\d{1,2}-\d{4})<\/td>\s*<td[^>]*>([^<]+)<\/td>\s*<td[^>]*>\s*<a\s+href="([^"]+)"[^>]*>/gi;
-
-  let match;
-  while ((match = tableRowRegex.exec(html)) !== null && notices.length < 50) {
-    const slNo = match[1].trim();
-    const dateStr = match[2].trim();
-    const title = match[3].trim().replace(/&/g, '&').replace(/&#8217;/g, "'").replace(/&#8211;/g, '-');
-    const pdfUrl = match[4].trim();
-
-    if (!pdfUrl || pdfUrl === '#') continue;
-
-    const [day, month, year] = dateStr.split('-').map(Number);
-    const parsedDate = new Date(year, month - 1, day);
-
-    const daysDiff = Math.floor((currentDate.getTime() - parsedDate.getTime()) / (1000 * 60 * 60 * 24));
-    const isNew = daysDiff <= 3 && daysDiff >= 0;
-
-    const category = categorizeNotice(title);
-    const isImportant = isHighPriority(title, category);
-
-    notices.push({
-      id: `notice-${slNo}`,
-      title,
-      date: `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`,
-      url: pdfUrl,
-      isNew,
-      isImportant,
-      category,
-    });
-  }
-
-  notices.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-
-  return {
-    success: true,
-    notices,
-    scrapedAt: new Date().toISOString()
-  };
-}
 
 export const noticesApi = {
   async fetchNotices(): Promise<NoticesResponse> {
-    // DIRECT MODE: Skip edge function entirely
+    // Try to scrape the college website
     const result = await scrapeDirectly();
 
     if (result.success && result.notices && result.notices.length > 0) {
@@ -225,6 +292,7 @@ export const noticesApi = {
     }
 
     // Fallback to sample notices
+    console.log('Using sample notices (scraping failed)');
     return {
       success: true,
       notices: SAMPLE_NOTICES,
